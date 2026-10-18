@@ -14,6 +14,8 @@
   THREADS_USER_ID       — ID профиля (необязательно, определится сам)
   POSTS_FILE            — путь к CSV (по умолчанию posts.csv)
   TZ_NAME               — часовой пояс расписания (по умолчанию Asia/Yekaterinburg)
+  IMAGES_BASE_URL       — откуда брать картинки, если в CSV указано только имя файла
+                          (по умолчанию публичный репозиторий <владелец>/threads-images)
 
 Запуск:
   python threads_poster.py            # опубликовать всё, что пора
@@ -37,6 +39,17 @@ TOKEN = os.environ.get("THREADS_ACCESS_TOKEN", "").strip()
 POSTS_FILE = os.environ.get("POSTS_FILE", "posts.csv")
 TZ = ZoneInfo(os.environ.get("TZ_NAME", "Asia/Yekaterinburg"))
 FIELDS = ["datetime", "text", "image_urls", "status", "post_id", "error"]
+_owner = os.environ.get("GITHUB_REPOSITORY_OWNER", "")
+IMAGES_BASE_URL = os.environ.get("IMAGES_BASE_URL") or (
+    f"https://raw.githubusercontent.com/{_owner}/threads-images/main/" if _owner else "")
+
+
+def image_url(name):
+    """Полная ссылка остаётся как есть; просто имя файла превращается в ссылку на threads-images."""
+    name = name.strip()
+    if name.lower().startswith(("http://", "https://")) or not IMAGES_BASE_URL:
+        return name
+    return IMAGES_BASE_URL.rstrip("/") + "/" + requests.utils.quote(name.lstrip("/"))
 
 
 # ---------- API ----------
@@ -184,7 +197,7 @@ def run(dry_run=False):
         return
     uid = None if dry_run else get_user_id()
     for row in due:
-        images = [u.strip() for u in row["image_urls"].split("|") if u.strip()]
+        images = [image_url(u) for u in row["image_urls"].split("|") if u.strip()]
         preview = row["text"][:60].replace("\n", " ")
         if dry_run:
             print(f"[dry-run] {row['datetime']} | частей: {len(split_text(row['text']))} "
