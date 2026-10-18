@@ -73,8 +73,17 @@ def get_user_id():
 def wait_ready(container_id, timeout=300):
     """Ждём, пока Threads обработает контейнер (важно для картинок)."""
     start = time.time()
+    time.sleep(3)
     while time.time() - start < timeout:
-        st = api("GET", container_id, fields="status,error_message")
+        try:
+            st = api("GET", container_id, fields="status,error_message")
+        except RuntimeError as e:
+            # Свежий контейнер (особенно картинка) может ещё не быть виден API — ждём и повторяем.
+            if "does not exist" in str(e) and time.time() - start < 90:
+                print(f"  контейнер {container_id} ещё не виден, жду…")
+                time.sleep(5)
+                continue
+            raise
         status = st.get("status")
         if status in ("FINISHED", "PUBLISHED"):
             return
@@ -92,10 +101,14 @@ def create_container(uid, text, images, reply_to=None):
         return api("POST", f"{uid}/threads", media_type="IMAGE",
                    image_url=images[0], text=text, **extra)["id"]
     children = []
-    for url in images[:20]:
-        cid = api("POST", f"{uid}/threads", media_type="IMAGE",
-                  image_url=url, is_carousel_item="true")["id"]
-        wait_ready(cid)
+    for n, url in enumerate(images[:20], 1):
+        try:
+            cid = api("POST", f"{uid}/threads", media_type="IMAGE",
+                      image_url=url, is_carousel_item="true")["id"]
+            wait_ready(cid)
+        except RuntimeError as e:
+            raise RuntimeError(f"картинка {n} ({url}): {e}") from None
+        print(f"  картинка {n}/{len(images[:20])} загружена")
         children.append(cid)
     return api("POST", f"{uid}/threads", media_type="CAROUSEL",
                children=",".join(children), text=text, **extra)["id"]
