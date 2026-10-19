@@ -43,7 +43,8 @@ TOKEN = os.environ.get("THREADS_ACCESS_TOKEN", "").strip()
 POSTS_FILE = os.environ.get("POSTS_FILE", "posts.csv")
 TZ = ZoneInfo(os.environ.get("TZ_NAME", "Asia/Yekaterinburg"))
 FIELDS = ["datetime", "text", "image_urls", "status", "post_id", "error",
-          "instagram", "ig_status", "ig_post_id", "ig_error"]
+          "instagram", "ig_status", "ig_post_id", "ig_error",
+          "ig_story", "ig_story_status", "ig_story_id"]
 IG_TOKEN = os.environ.get("INSTAGRAM_ACCESS_TOKEN", "").strip()
 IG_API = "https://graph.instagram.com/" + os.environ.get("INSTAGRAM_API_VERSION", "v25.0")
 IG_MAX_ITEMS = 10
@@ -193,6 +194,13 @@ def ig_post(uid, caption, images):
     return ig_api("POST", f"{uid}/media_publish", creation_id=cid)["id"]
 
 
+def ig_story(uid, image):
+    """Публикует одну картинку как сторис Instagram. Возвращает ID."""
+    cid = ig_api("POST", f"{uid}/media", media_type="STORIES", image_url=image)["id"]
+    ig_wait(cid)
+    return ig_api("POST", f"{uid}/media_publish", creation_id=cid)["id"]
+
+
 # ---------- Текст ----------
 
 def split_text(text):
@@ -302,7 +310,8 @@ def run(dry_run=False):
         if ig_due:
             print(f"Instagram: нет INSTAGRAM_ACCESS_TOKEN, пропускаю {len(ig_due)} пост(ов)")
         ig_due = []
-    if not th_due and not ig_due:
+    has_story = any(IG_TOKEN and r["ig_story"].strip() and _open(r["ig_story_status"]) for r in due)
+    if not th_due and not ig_due and not has_story:
         print("Нет постов к публикации.")
         return
     if dry_run:
@@ -311,6 +320,9 @@ def run(dry_run=False):
                   f"картинок: {len([u for u in r['image_urls'].split('|') if u.strip()])} | {r['text'][:60]!r}")
         for r in ig_due:
             print(f"[dry-run] Instagram {r['datetime']} | {r['image_urls'][:80]}")
+        for r in due:
+            if IG_TOKEN and r["ig_story"].strip() and _open(r["ig_story_status"]):
+                print(f"[dry-run] Сторис {r['datetime']} | {r['ig_story']}")
         return
 
     uid = get_user_id() if th_due else None
@@ -334,7 +346,7 @@ def run(dry_run=False):
             for row in ig_due:
                 row["ig_status"], row["ig_error"] = "error", str(e)[:300]
             save_posts(rows)
-            return
+            ig_due = []
         for row in ig_due:
             images = [image_url(u) for u in row["image_urls"].split("|") if u.strip()]
             try:
@@ -344,6 +356,29 @@ def run(dry_run=False):
             except Exception as e:
                 row["ig_status"], row["ig_error"] = "error", str(e)[:300]
                 print(f"✗ Instagram {row['datetime']} ошибка: {e}")
+            save_posts(rows)
+            time.sleep(5)
+
+    # Сторис: независимо от поста, тоже не догоняем опоздавшие больше чем на max_delay часов
+    st_due = [r for r in due if IG_TOKEN and r["ig_story"].strip() and _open(r["ig_story_status"])]
+    for r in list(st_due):
+        if (now - parse_dt(r["datetime"])).total_seconds() > max_delay * 3600:
+            r["ig_story_status"] = "skip"
+            st_due.remove(r)
+    if st_due and not dry_run:
+        try:
+            iuid = ig_user_id()
+        except Exception as e:
+            print(f"✗ Instagram сторис: не удалось получить аккаунт: {e}")
+            st_due = []
+        for row in st_due:
+            try:
+                row["ig_story_id"] = ig_story(iuid, image_url(row["ig_story"]))
+                row["ig_story_status"] = "published"
+                print(f"✓ Сторис {row['datetime']} опубликована: {row['ig_story_id']}")
+            except Exception as e:
+                row["ig_story_status"] = "error"
+                print(f"✗ Сторис {row['datetime']} ошибка: {e}")
             save_posts(rows)
             time.sleep(5)
 
@@ -376,6 +411,8 @@ def has_upcoming(hours):
         if TOKEN and _open(r["status"]):
             return True
         if IG_TOKEN and r["instagram"].strip().lower() in ("yes", "да", "1", "true") and _open(r["ig_status"]):
+            return True
+        if IG_TOKEN and r.get("ig_story", "").strip() and _open(r.get("ig_story_status", "")):
             return True
     return False
 
