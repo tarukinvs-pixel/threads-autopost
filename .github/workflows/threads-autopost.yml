@@ -1,11 +1,16 @@
-# Положите файл в репозиторий по пути .github/workflows/threads-autopost.yml
-# Секрет THREADS_ACCESS_TOKEN: Settings → Secrets and variables → Actions
+# Автопостинг в Threads и Instagram из posts.csv.
+# Секреты: THREADS_ACCESS_TOKEN, INSTAGRAM_ACCESS_TOKEN (Settings → Secrets and variables → Actions).
+#
+# Расписание GitHub ненадёжно: запуски по cron могут опаздывать на часы.
+# Поэтому один запуск не завершается сразу, а дежурит до 5 ч 40 мин:
+# раз в 2 минуты публикует всё, чьё время наступило, и сохраняет статусы.
+# Запуски по cron стоят каждый час с 8:07 до 20:07 по Уфе — хотя бы один из них сработает.
 name: Threads autopost
 
 on:
   schedule:
-    - cron: "7,37 * * * *"   # каждые 30 минут (в :07 и :37) — укладывается в бесплатный лимит
-  workflow_dispatch:          # ручной запуск
+    - cron: "7 3-15 * * *"    # 8:07–20:07 по Уфе (UTC+5), каждый час
+  workflow_dispatch:           # ручной запуск
 
 permissions:
   contents: write
@@ -17,23 +22,31 @@ concurrency:
 jobs:
   post:
     runs-on: ubuntu-latest
+    timeout-minutes: 350
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - run: pip install requests
-      - name: Publish due posts
+      - name: Publish due posts (watch loop)
         env:
           THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
           INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
-        run: python threads_poster.py
-      - name: Save statuses back to repo
         run: |
           git config user.name "threads-bot"
           git config user.email "bot@users.noreply.github.com"
-          git add posts.csv
-          git diff --cached --quiet && exit 0
-          git commit -m "Threads: обновлены статусы постов"
-          git pull --rebase
-          git push
+          end=$((SECONDS + 20400))   # 5 ч 40 мин
+          while :; do
+            git pull -q --rebase || true
+            python threads_poster.py || true
+            git add posts.csv
+            if ! git diff --cached --quiet; then
+              git commit -qm "Threads: обновлены статусы постов"
+              git pull -q --rebase && git push -q || echo "push не удался, повторю"
+            fi
+            # Нечего ждать в ближайшие 6 часов — выходим, чтобы не тратить минуты.
+            python threads_poster.py --upcoming 6 || { echo "Больше нет постов в очереди"; break; }
+            [ $SECONDS -ge $end ] && { echo "Лимит времени, передаю следующему запуску"; break; }
+            sleep 120
+          done

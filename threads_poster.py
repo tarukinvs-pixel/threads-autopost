@@ -362,7 +362,27 @@ def refresh_token(instagram=False):
     print(f"Новый токен (действует ~{days} дн.):\n{data['access_token']}")
 
 
+def has_upcoming(hours):
+    """Есть ли неопубликованные посты со временем от «6 ч назад» до «через hours ч»."""
+    rows = load_posts()
+    now = datetime.now(TZ)
+    for r in rows:
+        try:
+            dt = parse_dt(r["datetime"])
+        except ValueError:
+            continue
+        if not (-6 * 3600 <= (dt - now).total_seconds() <= hours * 3600):
+            continue
+        if TOKEN and _open(r["status"]):
+            return True
+        if IG_TOKEN and r["instagram"].strip().lower() in ("yes", "да", "1", "true") and _open(r["ig_status"]):
+            return True
+    return False
+
+
 if __name__ == "__main__":
+    if len(sys.argv) > 2 and sys.argv[1] == "--upcoming":
+        sys.exit(0 if has_upcoming(float(sys.argv[2])) else 1)
     if not TOKEN and not IG_TOKEN:
         sys.exit("Задайте переменную окружения THREADS_ACCESS_TOKEN и/или INSTAGRAM_ACCESS_TOKEN")
     if len(sys.argv) > 1 and sys.argv[1] == "refresh":
