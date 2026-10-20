@@ -1,48 +1,4 @@
 ✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 09:43:02
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 09:45:05
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 09:47:07
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 09:49:09
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 09:51:11
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 09:53:13
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 09:55:15
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 09:57:17
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 09:59:19
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 10:01:22
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 10:03:24
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 10:05:26
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 10:07:28
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 10:09:30
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 10:11:32
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 10:13:35
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 10:15:37
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 10:17:39
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 10:19:41
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 10:21:43
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 10:23:45
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 10:25:47
-✗ Threads недоступен: Threads API 400: API access blocked.
 === 2026-10-20 10:27:49
 ✗ Threads недоступен: Threads API 400: API access blocked.
 === 2026-10-20 10:29:51
@@ -298,3 +254,47 @@
 ✗ Threads недоступен: Threads API 400: API access blocked.
 ✗ Instagram: не удалось получить аккаунт: Instagram API 400: API access blocked.
 ✗ Instagram сторис: не удалось получить аккаунт: Instagram API 400: API access blocked.
+=== 2026-10-20 13:23:05
+  контейнер 17952738180297492: FINISHED (3 c)
+  картинка 1/7 загружена
+  контейнер 17952738207297492: FINISHED (3 c)
+  картинка 2/7 загружена
+  контейнер 17952738231297492: FINISHED (3 c)
+  картинка 3/7 загружена
+  контейнер 17952738255297492: FINISHED (3 c)
+  картинка 4/7 загружена
+  контейнер 17952738276297492: FINISHED (3 c)
+  картинка 5/7 загружена
+  контейнер 17952738300297492: FINISHED (3 c)
+  картинка 6/7 загружена
+  контейнер 17952738324297492: FINISHED (3 c)
+  картинка 7/7 загружена
+  контейнер 17952738345297492: FINISHED (3 c)
+✓ Threads 2026-10-20 12:00 опубликовано: 18134423773740721
+  контейнер 17952738561297492: FINISHED (3 c)
+  картинка 1/8 загружена
+  контейнер 17952738585297492: FINISHED (3 c)
+  картинка 2/8 загружена
+  контейнер 17952738609297492: FINISHED (3 c)
+  картинка 3/8 загружена
+  контейнер 17952738726297492: FINISHED (3 c)
+  картинка 4/8 загружена
+  контейнер 17952738771297492: FINISHED (3 c)
+  картинка 5/8 загружена
+  контейнер 17952738837297492: FINISHED (3 c)
+  картинка 6/8 загружена
+  контейнер 17952738864297492: FINISHED (3 c)
+  картинка 7/8 загружена
+  контейнер 17952738897297492: FINISHED (3 c)
+  картинка 8/8 загружена
+  контейнер 17952738930297492: FINISHED (3 c)
+✓ Threads 2026-10-20 13:00 опубликовано: 17912880699550445
+  Instagram: картинка 1/7 загружена
+  Instagram: картинка 2/7 загружена
+  Instagram: картинка 3/7 загружена
+  Instagram: картинка 4/7 загружена
+  Instagram: картинка 5/7 загружена
+  Instagram: картинка 6/7 загружена
+  Instagram: картинка 7/7 загружена
+✓ Instagram 2026-10-20 12:00 опубликовано: 18118958885072096
+✓ Сторис 2026-10-20 12:00 опубликована: 18012057414003711
