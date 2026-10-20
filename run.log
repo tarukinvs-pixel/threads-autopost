@@ -1,4 +1,3 @@
-=== 2026-10-20 09:28:47
 Traceback (most recent call last):
   File "/home/runner/work/threads-autopost/threads-autopost/threads_poster.py", line 429, in <module>
     run(dry_run="--dry-run" in sys.argv)
@@ -292,6 +291,10 @@ RuntimeError: Threads API 400: API access blocked.
 ✗ Instagram: не удалось получить аккаунт: Instagram API 400: API access blocked.
 ✗ Instagram сторис: не удалось получить аккаунт: Instagram API 400: API access blocked.
 === 2026-10-20 12:50:26
+✗ Threads недоступен: Threads API 400: API access blocked.
+✗ Instagram: не удалось получить аккаунт: Instagram API 400: API access blocked.
+✗ Instagram сторис: не удалось получить аккаунт: Instagram API 400: API access blocked.
+=== 2026-10-20 12:52:29
 ✗ Threads недоступен: Threads API 400: API access blocked.
 ✗ Instagram: не удалось получить аккаунт: Instagram API 400: API access blocked.
 ✗ Instagram сторис: не удалось получить аккаунт: Instagram API 400: API access blocked.
