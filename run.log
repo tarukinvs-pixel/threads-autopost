@@ -1,22 +1,3 @@
-=== 2026-10-20 10:58:22
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 11:00:24
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 11:02:26
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 11:04:28
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 11:06:30
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 11:08:32
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 11:10:34
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 11:12:37
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 11:14:39
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 11:16:41
 ✗ Threads недоступен: Threads API 400: API access blocked.
 === 2026-10-20 11:18:43
 ✗ Threads недоступен: Threads API 400: API access blocked.
@@ -298,3 +279,22 @@
 Нет постов к публикации.
 === 2026-10-20 13:58:54
 Нет постов к публикации.
+=== 2026-10-20 14:00:56
+  контейнер 17952742734297492: FINISHED (3 c)
+  картинка 1/8 загружена
+  контейнер 17952742764297492: FINISHED (3 c)
+  картинка 2/8 загружена
+  контейнер 17952742797297492: FINISHED (3 c)
+  картинка 3/8 загружена
+  контейнер 17952742821297492: FINISHED (3 c)
+  картинка 4/8 загружена
+  контейнер 17952742866297492: FINISHED (3 c)
+  картинка 5/8 загружена
+  контейнер 17952742890297492: FINISHED (3 c)
+  картинка 6/8 загружена
+  контейнер 17952742911297492: FINISHED (3 c)
+  картинка 7/8 загружена
+  контейнер 17952742938297492: FINISHED (3 c)
+  картинка 8/8 загружена
+  контейнер 17952742974297492: FINISHED (3 c)
+✓ Threads 2026-10-20 14:00 опубликовано: 18082258622437028
