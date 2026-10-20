@@ -1,8 +1,4 @@
 ✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 09:38:58
-✗ Threads недоступен: Threads API 400: API access blocked.
-=== 2026-10-20 09:41:00
-✗ Threads недоступен: Threads API 400: API access blocked.
 === 2026-10-20 09:43:02
 ✗ Threads недоступен: Threads API 400: API access blocked.
 === 2026-10-20 09:45:05
@@ -295,6 +291,10 @@
 ✗ Instagram: не удалось получить аккаунт: Instagram API 400: API access blocked.
 ✗ Instagram сторис: не удалось получить аккаунт: Instagram API 400: API access blocked.
 === 2026-10-20 13:18:59
+✗ Threads недоступен: Threads API 400: API access blocked.
+✗ Instagram: не удалось получить аккаунт: Instagram API 400: API access blocked.
+✗ Instagram сторис: не удалось получить аккаунт: Instagram API 400: API access blocked.
+=== 2026-10-20 13:21:02
 ✗ Threads недоступен: Threads API 400: API access blocked.
 ✗ Instagram: не удалось получить аккаунт: Instagram API 400: API access blocked.
 ✗ Instagram сторис: не удалось получить аккаунт: Instagram API 400: API access blocked.
