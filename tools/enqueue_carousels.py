@@ -11,7 +11,7 @@ Git-операции (commit/push) выполняет вызывающий: сн
 
   out/           — папки 01-slug, 02-slug, … с PNG (результат render.py), по порядку публикации
   captions.json  — массив по порядку публикации: [{"caption": "...", "hashtags": "#a #b"}, ...]
-  --times        — время слотов через запятую (по умолчанию 12 слотов дня)
+  --times        — время слотов через запятую (по умолчанию 8 слотов дня: 5 новостей + 3 заявки)
   --instagram    — слоты, которые также публикуются в Instagram (по умолчанию заявки: 12:00,16:00,21:00);
                    пустая строка — ничего в Instagram
 Карточки сохраняются в JPEG (качество 92): Instagram принимает только JPEG, Threads — тоже.
@@ -23,7 +23,7 @@ import pathlib
 import shutil
 import sys
 
-DEFAULT_TIMES = "09:00,10:00,11:00,12:00,13:00,14:00,15:00,16:00,18:00,19:00,20:00,21:00"
+DEFAULT_TIMES = "09:00,11:00,12:00,14:00,16:00,18:00,19:00,21:00"
 FIELDS = ["datetime", "text", "image_urls", "status", "post_id", "error",
           "instagram", "ig_status", "ig_post_id", "ig_error",
           "ig_story", "ig_story_status", "ig_story_id"]
