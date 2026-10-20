@@ -166,3 +166,5 @@ RuntimeError: Threads API 400: API access blocked.
 === 2026-10-20 11:30:55
 – Threads 2026-10-20 10:00: пропущен, опоздал больше чем на 90 мин
 ✗ Threads недоступен: Threads API 400: API access blocked.
+=== 2026-10-20 11:32:58
+✗ Threads недоступен: Threads API 400: API access blocked.
