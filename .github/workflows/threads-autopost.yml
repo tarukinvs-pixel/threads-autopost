@@ -41,8 +41,9 @@ jobs:
             git pull -q --rebase || true
             { echo "=== $(TZ=Asia/Yekaterinburg date '+%F %T')"; timeout 1500 python -u threads_poster.py 2>&1; } | tee -a run.log || true
             tail -n 300 run.log > run.tmp && mv run.tmp run.log
-            git add posts.csv run.log
+            git add posts.csv
             if ! git diff --cached --quiet; then
+              git add run.log
               git commit -qm "Threads: обновлены статусы постов" || true
               git pull -q --rebase && git push -q || echo "push не удался, повторю"
             fi

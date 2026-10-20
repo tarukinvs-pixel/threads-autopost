@@ -293,6 +293,15 @@ def run(dry_run=False):
     now = datetime.now(TZ)
     due = [r for r in rows if _due(r, now)]
     th_due = [r for r in due if TOKEN and _open(r["status"])]
+    # Threads тоже не догоняет сильно опоздавшие посты: пачка старых постов похожа на спам.
+    th_delay = float(os.environ.get("THREADS_MAX_DELAY_MIN", "90"))
+    late = [r for r in th_due if (now - parse_dt(r["datetime"])).total_seconds() > th_delay * 60]
+    for r in late:
+        r["status"], r["error"] = "skip", f"опоздал больше чем на {th_delay:g} мин"
+        print(f"– Threads {r['datetime']}: пропущен, опоздал больше чем на {th_delay:g} мин")
+    th_due = [r for r in th_due if r not in late]
+    if late and not dry_run:
+        save_posts(rows)
     ig_due = [r for r in due if r["instagram"].strip().lower() in ("yes", "да", "1", "true")
               and _open(r["ig_status"])]
     # Instagram не догоняет старые посты (например, накопившиеся до подключения токена):
@@ -326,7 +335,16 @@ def run(dry_run=False):
                 print(f"[dry-run] Сторис {r['datetime']} | {r['ig_story']}")
         return
 
-    uid = get_user_id() if th_due else None
+    uid = None
+    if th_due:
+        try:
+            uid = get_user_id()
+        except Exception as e:
+            print(f"✗ Threads недоступен: {e}")
+            for row in th_due:
+                row["error"] = str(e)[:300]
+            save_posts(rows)
+            th_due = []
     for row in th_due:
         images = [image_url(u) for u in row["image_urls"].split("|") if u.strip()]
         try:
