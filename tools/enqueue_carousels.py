@@ -14,6 +14,9 @@ Git-операции (commit/push) выполняет вызывающий: сн
   --times        — время слотов через запятую (по умолчанию 8 слотов дня: 5 новостей + 3 заявки)
   --instagram    — слоты, которые также публикуются в Instagram (по умолчанию заявки: 12:00,16:00,21:00);
                    пустая строка — ничего в Instagram
+  --articles     — articles.json: массив той же длины, по порядку публикации; для новости
+                   {"title": "...", "text": "абзацы через пустую строку"}, для заявки null.
+                   Статьи сохраняются в articles/ДАТА/ рядом с posts.csv и уходят в Telegram → Дзен
 Карточки сохраняются в JPEG (качество 92): Instagram принимает только JPEG, Threads — тоже.
 """
 import argparse
@@ -26,7 +29,9 @@ import sys
 DEFAULT_TIMES = "09:00,11:00,12:00,14:00,16:00,18:00,19:00,21:00"
 FIELDS = ["datetime", "text", "image_urls", "status", "post_id", "error",
           "instagram", "ig_status", "ig_post_id", "ig_error",
-          "ig_story", "ig_story_status", "ig_story_id"]
+          "ig_story", "ig_story_status", "ig_story_id",
+          "tg_article", "tg_status", "tg_post_id", "tg_error"]
+TG_MAX = 2900   # до 3000 знаков Дзен делает один пост; длиннее — может разбить на несколько
 STORY_W, STORY_H = 1080, 1920
 STORY_BG = (20, 32, 43)        # тёмный фон карточек
 STORY_ACC = (217, 89, 38)      # фирменный оранжевый
@@ -88,6 +93,7 @@ def main():
     ap.add_argument("--times", default=DEFAULT_TIMES)
     ap.add_argument("--instagram", default=DEFAULT_IG)
     ap.add_argument("--keep-days", type=int, default=3, help="сколько дней хранить картинки")
+    ap.add_argument("--articles", default="", help="articles.json со статьями для Telegram/Дзена")
     a = ap.parse_args()
 
     times = [t.strip() for t in a.times.split(",") if t.strip()]
@@ -98,13 +104,17 @@ def main():
     if not (len(dirs) == len(caps) == len(times)):
         sys.exit(f"Не совпадает число каруселей ({len(dirs)}), подписей ({len(caps)}) и слотов ({len(times)})")
 
+    arts = json.loads(pathlib.Path(a.articles).read_text(encoding="utf-8")) if a.articles else [None] * len(times)
+    if len(arts) != len(times):
+        sys.exit(f"В articles.json {len(arts)} элементов, а слотов {len(times)} (для заявок ставьте null)")
     posts_path = pathlib.Path(a.posts)
+    art_root = posts_path.parent / "articles"
     rows, delim = read_posts(posts_path)
     taken = {r["datetime"].strip() for r in rows}
 
     img_root = pathlib.Path(a.images_repo)
     added = []
-    for d, cap, t in zip(dirs, caps, times):
+    for d, cap, t, art in zip(dirs, caps, times, arts):
         dt = f"{a.date} {t}"
         if dt in taken:
             print(f"! {dt} уже есть в posts.csv — пропускаю {d.name}")
@@ -131,12 +141,26 @@ def main():
         text = f"{caption}\n\n{tags}" if tags else caption
         if len(text) > MAX_LEN:
             sys.exit(f"{dt}: текст {len(text)} символов, лимит Threads {MAX_LEN}")
+        art_rel = ""
+        if art:
+            title = " ".join(art["title"].split())
+            body = art["text"].strip()
+            full = f"{title}\n\n{body}\n"
+            if len(title) > 140:
+                sys.exit(f"{dt}: заголовок статьи {len(title)} символов, в Дзене максимум 140")
+            if len(full) > TG_MAX:
+                sys.exit(f"{dt}: статья {len(full)} символов, максимум {TG_MAX}")
+            (art_root / a.date).mkdir(parents=True, exist_ok=True)
+            art_file = art_root / a.date / f"{d.name}.txt"
+            art_file.write_text(full, encoding="utf-8")
+            art_rel = f"articles/{a.date}/{art_file.name}"
         rows.append({"datetime": dt, "text": text, "image_urls": "|".join(rel),
                      "status": "", "post_id": "", "error": "",
                      "instagram": "yes" if t in ig_slots else "",
                      "ig_status": "", "ig_post_id": "", "ig_error": "",
-                     "ig_story": story_rel, "ig_story_status": "", "ig_story_id": ""})
-        ig = " | + Instagram + сторис" if t in ig_slots else ""
+                     "ig_story": story_rel, "ig_story_status": "", "ig_story_id": "",
+                     "tg_article": art_rel, "tg_status": "", "tg_post_id": "", "tg_error": ""})
+        ig = (" | + Instagram + сторис" if t in ig_slots else "") + (f" | + статья {len(full)} симв." if art else "")
         if t in ig_slots and len(rel) > 10:
             sys.exit(f"{dt}: для Instagram максимум 10 карточек, а здесь {len(rel)}")
         added.append(f"{dt} | {d.name} | {len(rel)} карточек | {len(text)} симв.{ig}")
@@ -149,6 +173,11 @@ def main():
         if old.is_dir() and len(old.name) == 10 and old.name[4] == "-" and old.name < cutoff:
             shutil.rmtree(old)
             print(f"Удалена старая папка картинок: {old.name}")
+    art_cut = (date.fromisoformat(a.date) - timedelta(days=7)).isoformat()
+    if art_root.exists():
+        for old in art_root.iterdir():
+            if old.is_dir() and old.name < art_cut:
+                shutil.rmtree(old)
 
     with open(posts_path, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=FIELDS, delimiter=delim)

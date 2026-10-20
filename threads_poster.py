@@ -10,6 +10,9 @@
   - продление долгоживущего токена: python threads_poster.py refresh
   - Instagram: строки с instagram=yes дополнительно публикуются в Instagram
     (нужен INSTAGRAM_ACCESS_TOKEN; картинки только JPEG, в карусели до 10 штук)
+  - Telegram → Дзен: строки с tg_article (путь к файлу статьи) публикуются длинным постом
+    в Telegram-канал; Дзен забирает их оттуда сам через @zen_sync_bot
+    (нужны TELEGRAM_BOT_TOKEN и TELEGRAM_CHANNEL, например @torgovye_metry)
 
 Переменные окружения:
   THREADS_ACCESS_TOKEN  — долгоживущий токен Threads API
@@ -44,7 +47,11 @@ POSTS_FILE = os.environ.get("POSTS_FILE", "posts.csv")
 TZ = ZoneInfo(os.environ.get("TZ_NAME", "Asia/Yekaterinburg"))
 FIELDS = ["datetime", "text", "image_urls", "status", "post_id", "error",
           "instagram", "ig_status", "ig_post_id", "ig_error",
-          "ig_story", "ig_story_status", "ig_story_id"]
+          "ig_story", "ig_story_status", "ig_story_id",
+          "tg_article", "tg_status", "tg_post_id", "tg_error"]
+TG_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+TG_CHANNEL = os.environ.get("TELEGRAM_CHANNEL", "").strip()
+TG_MAX = 4096
 IG_TOKEN = os.environ.get("INSTAGRAM_ACCESS_TOKEN", "").strip()
 IG_API = "https://graph.instagram.com/" + os.environ.get("INSTAGRAM_API_VERSION", "v25.0")
 IG_MAX_ITEMS = 10
@@ -204,6 +211,42 @@ def ig_story(uid, image):
 
 # ---------- Текст ----------
 
+# ---------- Telegram (→ Дзен) ----------
+
+def tg_api(method, **payload):
+    r = requests.post(f"https://api.telegram.org/bot{TG_TOKEN}/{method}", json=payload, timeout=60)
+    data = r.json()
+    if not data.get("ok"):
+        raise RuntimeError(f"Telegram {method}: {data.get('description', data)}")
+    return data["result"]
+
+
+def tg_article_html(path):
+    """Файл статьи: первая строка — заголовок, дальше абзацы через пустую строку."""
+    import html as _h
+    text = open(path, encoding="utf-8").read().strip()
+    title, _, body = text.partition("\n")
+    paras = [p.strip() for p in re.split(r"\n\s*\n", body.strip()) if p.strip()]
+    out = f"<b>{_h.escape(title.strip())}</b>\n\n" + "\n\n".join(_h.escape(p) for p in paras)
+    if len(out) > TG_MAX:
+        raise RuntimeError(f"статья {len(out)} символов, лимит Telegram {TG_MAX}")
+    return out
+
+
+def tg_post(row):
+    html_text = tg_article_html(row["tg_article"].strip())
+    images = [image_url(u) for u in row["image_urls"].split("|") if u.strip()]
+    payload = {"chat_id": TG_CHANNEL, "text": html_text, "parse_mode": "HTML"}
+    if images:
+        # обложка — первая карточка карусели, показывается крупно над текстом
+        payload["link_preview_options"] = {"url": images[0], "prefer_large_media": True,
+                                           "show_above_text": True}
+    else:
+        payload["link_preview_options"] = {"is_disabled": True}
+    msg = tg_api("sendMessage", **payload)
+    return str(msg["message_id"])
+
+
 def split_text(text):
     """Делит текст на части ≤ 500 символов: сначала по '---', потом по абзацам/предложениям."""
     parts = [p.strip() for p in re.split(r"\n\s*---\s*\n", text) if p.strip()]
@@ -321,7 +364,20 @@ def run(dry_run=False):
             print(f"Instagram: нет INSTAGRAM_ACCESS_TOKEN, пропускаю {len(ig_due)} пост(ов)")
         ig_due = []
     has_story = any(IG_TOKEN and r["ig_story"].strip() and _open(r["ig_story_status"]) for r in due)
-    if not th_due and not ig_due and not has_story:
+    tg_due = [r for r in due if r["tg_article"].strip() and _open(r["tg_status"])]
+    tg_fresh = []
+    for r in tg_due:
+        if (now - parse_dt(r["datetime"])).total_seconds() > max_delay * 3600:
+            r["tg_status"], r["tg_error"] = "skip", f"опоздал больше чем на {max_delay:g} ч"
+        else:
+            tg_fresh.append(r)
+    if len(tg_fresh) != len(tg_due) and not dry_run:
+        save_posts(rows)
+    tg_due = tg_fresh
+    if tg_due and not (TG_TOKEN and TG_CHANNEL):
+        print(f"Telegram: нет TELEGRAM_BOT_TOKEN/TELEGRAM_CHANNEL, пропускаю {len(tg_due)} статей")
+        tg_due = []
+    if not th_due and not ig_due and not has_story and not tg_due:
         print("Нет постов к публикации.")
         return
     if dry_run:
@@ -333,6 +389,8 @@ def run(dry_run=False):
         for r in due:
             if IG_TOKEN and r["ig_story"].strip() and _open(r["ig_story_status"]):
                 print(f"[dry-run] Сторис {r['datetime']} | {r['ig_story']}")
+        for r in tg_due:
+            print(f"[dry-run] Telegram {r['datetime']} | {r['tg_article']} | {len(tg_article_html(r['tg_article']))} симв.")
         return
 
     uid = None
@@ -401,6 +459,17 @@ def run(dry_run=False):
             save_posts(rows)
             time.sleep(5)
 
+    for row in tg_due:
+        try:
+            row["tg_post_id"] = tg_post(row)
+            row["tg_status"], row["tg_error"] = "published", ""
+            print(f"✓ Telegram {row['datetime']} опубликовано: {row['tg_post_id']}")
+        except Exception as e:
+            row["tg_status"], row["tg_error"] = "error", str(e)[:300]
+            print(f"✗ Telegram {row['datetime']} ошибка: {e}")
+        save_posts(rows)
+        time.sleep(3)
+
 
 def refresh_token(instagram=False):
     if instagram:
@@ -433,14 +502,19 @@ def has_upcoming(hours):
             return True
         if IG_TOKEN and r.get("ig_story", "").strip() and _open(r.get("ig_story_status", "")):
             return True
+        if TG_TOKEN and r.get("tg_article", "").strip() and _open(r.get("tg_status", "")):
+            return True
     return False
 
 
 if __name__ == "__main__":
     if len(sys.argv) > 2 and sys.argv[1] == "--upcoming":
         sys.exit(0 if has_upcoming(float(sys.argv[2])) else 1)
-    if not TOKEN and not IG_TOKEN:
-        sys.exit("Задайте переменную окружения THREADS_ACCESS_TOKEN и/или INSTAGRAM_ACCESS_TOKEN")
+    if len(sys.argv) > 1 and sys.argv[1] == "tg-test":
+        print(tg_api("getChat", chat_id=TG_CHANNEL).get("title"))
+        sys.exit(0)
+    if not TOKEN and not IG_TOKEN and not TG_TOKEN:
+        sys.exit("Задайте THREADS_ACCESS_TOKEN, INSTAGRAM_ACCESS_TOKEN и/или TELEGRAM_BOT_TOKEN")
     if len(sys.argv) > 1 and sys.argv[1] == "refresh":
         refresh_token(instagram="instagram" in sys.argv)
     else:

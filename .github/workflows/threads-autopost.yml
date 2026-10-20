@@ -1,5 +1,6 @@
-# Автопостинг в Threads и Instagram из posts.csv.
-# Секреты: THREADS_ACCESS_TOKEN, INSTAGRAM_ACCESS_TOKEN (Settings → Secrets and variables → Actions).
+# Автопостинг в Threads, Instagram и Telegram (→ Дзен) из posts.csv.
+# Секреты: THREADS_ACCESS_TOKEN, INSTAGRAM_ACCESS_TOKEN, TELEGRAM_BOT_TOKEN, TELEGRAM_CHANNEL
+# (Settings → Secrets and variables → Actions).
 #
 # Расписание GitHub ненадёжно: запуски по cron могут опаздывать на часы.
 # Поэтому один запуск не завершается сразу, а дежурит до 5 ч 40 мин:
@@ -33,6 +34,8 @@ jobs:
         env:
           THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
           INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL }}
         run: |
           git config user.name "threads-bot"
           git config user.email "bot@users.noreply.github.com"
