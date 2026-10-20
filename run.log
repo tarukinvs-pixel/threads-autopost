@@ -1,0 +1,13 @@
+=== 2026-10-20 09:28:47
+Traceback (most recent call last):
+  File "/home/runner/work/threads-autopost/threads-autopost/threads_poster.py", line 429, in <module>
+    run(dry_run="--dry-run" in sys.argv)
+  File "/home/runner/work/threads-autopost/threads-autopost/threads_poster.py", line 329, in run
+    uid = get_user_id() if th_due else None
+          ^^^^^^^^^^^^^
+  File "/home/runner/work/threads-autopost/threads-autopost/threads_poster.py", line 79, in get_user_id
+    return uid or api("GET", "me", fields="id,username")["id"]
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/threads-autopost/threads-autopost/threads_poster.py", line 73, in api
+    raise RuntimeError(f"Threads API {r.status_code}: {msg}")
+RuntimeError: Threads API 400: API access blocked.
