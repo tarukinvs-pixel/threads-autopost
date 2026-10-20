@@ -1,7 +1,3 @@
-          ^^^^^^^^^^^^^
-  File "/home/runner/work/threads-autopost/threads-autopost/threads_poster.py", line 79, in get_user_id
-    return uid or api("GET", "me", fields="id,username")["id"]
-                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/work/threads-autopost/threads-autopost/threads_poster.py", line 73, in api
     raise RuntimeError(f"Threads API {r.status_code}: {msg}")
 RuntimeError: Threads API 400: API access blocked.
@@ -295,6 +291,10 @@ RuntimeError: Threads API 400: API access blocked.
 ✗ Instagram: не удалось получить аккаунт: Instagram API 400: API access blocked.
 ✗ Instagram сторис: не удалось получить аккаунт: Instagram API 400: API access blocked.
 === 2026-10-20 13:14:55
+✗ Threads недоступен: Threads API 400: API access blocked.
+✗ Instagram: не удалось получить аккаунт: Instagram API 400: API access blocked.
+✗ Instagram сторис: не удалось получить аккаунт: Instagram API 400: API access blocked.
+=== 2026-10-20 13:16:57
 ✗ Threads недоступен: Threads API 400: API access blocked.
 ✗ Instagram: не удалось получить аккаунт: Instagram API 400: API access blocked.
 ✗ Instagram сторис: не удалось получить аккаунт: Instagram API 400: API access blocked.
