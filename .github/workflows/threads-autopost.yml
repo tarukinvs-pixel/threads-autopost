@@ -39,10 +39,11 @@ jobs:
           end=$((SECONDS + 20400))   # 5 ч 40 мин
           while :; do
             git pull -q --rebase || true
-            python threads_poster.py || true
-            git add posts.csv
+            { echo "=== $(TZ=Asia/Yekaterinburg date '+%F %T')"; timeout 1500 python -u threads_poster.py 2>&1; } | tee -a run.log || true
+            tail -n 300 run.log > run.tmp && mv run.tmp run.log
+            git add posts.csv run.log
             if ! git diff --cached --quiet; then
-              git commit -qm "Threads: обновлены статусы постов"
+              git commit -qm "Threads: обновлены статусы постов" || true
               git pull -q --rebase && git push -q || echo "push не удался, повторю"
             fi
             # Нечего ждать в ближайшие 6 часов — выходим, чтобы не тратить минуты.

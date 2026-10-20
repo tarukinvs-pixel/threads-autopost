@@ -79,7 +79,7 @@ def get_user_id():
     return uid or api("GET", "me", fields="id,username")["id"]
 
 
-def wait_ready(container_id, timeout=300):
+def wait_ready(container_id, timeout=150):
     """Ждём, пока Threads обработает контейнер (важно для картинок)."""
     start = time.time()
     time.sleep(3)
@@ -94,6 +94,7 @@ def wait_ready(container_id, timeout=300):
                 continue
             raise
         status = st.get("status")
+        print(f"  контейнер {container_id}: {status} ({int(time.time() - start)} c)", flush=True)
         if status in ("FINISHED", "PUBLISHED"):
             return
         if status in ("ERROR", "EXPIRED"):
