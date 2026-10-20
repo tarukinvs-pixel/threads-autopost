@@ -250,3 +250,8 @@ RuntimeError: Threads API 400: API access blocked.
 ✗ Threads недоступен: Threads API 400: API access blocked.
 ✗ Instagram: не удалось получить аккаунт: Instagram API 400: API access blocked.
 ✗ Instagram сторис: не удалось получить аккаунт: Instagram API 400: API access blocked.
+=== 2026-10-20 12:30:01
+– Threads 2026-10-20 11:00: пропущен, опоздал больше чем на 90 мин
+✗ Threads недоступен: Threads API 400: API access blocked.
+✗ Instagram: не удалось получить аккаунт: Instagram API 400: API access blocked.
+✗ Instagram сторис: не удалось получить аккаунт: Instagram API 400: API access blocked.
