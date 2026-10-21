@@ -10,6 +10,8 @@
   - продление долгоживущего токена: python threads_poster.py refresh
   - Instagram: строки с instagram=yes дополнительно публикуются в Instagram
     (нужен INSTAGRAM_ACCESS_TOKEN; картинки только JPEG, в карусели до 10 штук)
+  - рилсы: если в image_urls одна ссылка на .mp4, в Instagram уходит Reels, в Threads — видео
+    (строки рилсов ставит tools/enqueue_reels.py; в Threads они по умолчанию skip)
   - Telegram → Дзен: строки с tg_article (путь к файлу статьи) публикуются длинным постом
     в Telegram-канал; Дзен забирает их оттуда сам через @zen_sync_bot
     (нужны TELEGRAM_BOT_TOKEN и TELEGRAM_CHANNEL, например @torgovye_metry)
@@ -86,7 +88,7 @@ def get_user_id():
     return uid or api("GET", "me", fields="id,username")["id"]
 
 
-def wait_ready(container_id, timeout=150):
+def wait_ready(container_id, timeout=300):
     """Ждём, пока Threads обработает контейнер (важно для картинок)."""
     start = time.time()
     time.sleep(3)
@@ -110,10 +112,18 @@ def wait_ready(container_id, timeout=150):
     raise RuntimeError(f"Контейнер {container_id} не готов за {timeout} c")
 
 
+def is_video(urls):
+    """Одна ссылка на .mp4 — это рилс (видео), а не картинки."""
+    return len(urls) == 1 and urls[0].lower().split("?")[0].endswith(".mp4")
+
+
 def create_container(uid, text, images, reply_to=None):
     extra = {"reply_to_id": reply_to} if reply_to else {}
     if not images:
         return api("POST", f"{uid}/threads", media_type="TEXT", text=text, **extra)["id"]
+    if is_video(images):
+        return api("POST", f"{uid}/threads", media_type="VIDEO",
+                   video_url=images[0], text=text, **extra)["id"]
     if len(images) == 1:
         return api("POST", f"{uid}/threads", media_type="IMAGE",
                    image_url=images[0], text=text, **extra)["id"]
@@ -179,6 +189,13 @@ def ig_post(uid, caption, images):
     """Публикует картинку или карусель в Instagram. Возвращает ID публикации."""
     if not images:
         raise RuntimeError("для Instagram нужна хотя бы одна картинка")
+    if is_video(images):
+        # Рилс: Instagram сам скачивает видео по ссылке и обрабатывает его до нескольких минут.
+        cid = ig_api("POST", f"{uid}/media", media_type="REELS", video_url=images[0],
+                     caption=caption, share_to_feed="true")["id"]
+        print("  Instagram: рилс загружается…")
+        ig_wait(cid, timeout=900)
+        return ig_api("POST", f"{uid}/media_publish", creation_id=cid)["id"]
     if len(images) > IG_MAX_ITEMS:
         raise RuntimeError(f"в карусели Instagram максимум {IG_MAX_ITEMS} картинок, а здесь {len(images)}")
     bad = [u for u in images if not u.lower().split("?")[0].endswith((".jpg", ".jpeg"))]
