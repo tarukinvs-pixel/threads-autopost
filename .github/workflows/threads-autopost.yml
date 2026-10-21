@@ -5,16 +5,25 @@
 # Расписание GitHub ненадёжно: запуски по cron могут опаздывать на часы.
 # Поэтому один запуск не завершается сразу, а дежурит до 5 ч 40 мин:
 # раз в 2 минуты публикует всё, чьё время наступило, и сохраняет статусы.
-# Запуски по cron стоят каждый час с 8:07 до 20:07 по Уфе — хотя бы один из них сработает.
+# Запуски по cron стоят каждый час с 8:07 до 20:07 по Уфе, но GitHub их часто задерживает
+# на часы или пропускает. Поэтому есть ещё два надёжных пути запуска:
+#  - push в posts.csv (утреннее задание ставит посты в очередь — дежурство начинается сразу);
+#  - эстафета: дежурство, упёршееся в лимит времени, само запускает следующее,
+#    пока в очереди остаются посты.
+# Коммиты самого бота (GITHUB_TOKEN) новых запусков по push не создают, так что цикла нет.
 name: Threads autopost
 
 on:
   schedule:
-    - cron: "7 3-15 * * *"    # 8:07–20:07 по Уфе (UTC+5), каждый час
-  workflow_dispatch:           # ручной запуск
+    - cron: "7 3-15 * * *"    # 8:07–20:07 по Уфе (UTC+5), каждый час — запасной путь
+  push:
+    branches: [main]
+    paths: [posts.csv]
+  workflow_dispatch:           # ручной запуск и эстафета
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: threads-autopost
@@ -36,6 +45,7 @@ jobs:
           INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           git config user.name "threads-bot"
           git config user.email "bot@users.noreply.github.com"
@@ -52,6 +62,10 @@ jobs:
             fi
             # Нечего ждать в ближайшие 6 часов — выходим, чтобы не тратить минуты.
             python threads_poster.py --upcoming 6 || { echo "Больше нет постов в очереди"; break; }
-            [ $SECONDS -ge $end ] && { echo "Лимит времени, передаю следующему запуску"; break; }
+            if [ $SECONDS -ge $end ]; then
+              echo "Лимит времени, передаю следующему запуску"
+              gh workflow run threads-autopost.yml --ref main -R "$GITHUB_REPOSITORY" || echo "эстафета не запустилась"
+              break
+            fi
             sleep 120
           done
