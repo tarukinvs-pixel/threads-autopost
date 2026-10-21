@@ -192,7 +192,8 @@ def ig_post(uid, caption, images):
     if is_video(images):
         # Рилс: Instagram сам скачивает видео по ссылке и обрабатывает его до нескольких минут.
         cid = ig_api("POST", f"{uid}/media", media_type="REELS", video_url=images[0],
-                     caption=caption, share_to_feed="true")["id"]
+                     caption=caption, share_to_feed="true",
+                     thumb_offset="2000")["id"]  # обложка — кадр на 2-й секунде, где хук виден целиком
         print("  Instagram: рилс загружается…")
         ig_wait(cid, timeout=900)
         return ig_api("POST", f"{uid}/media_publish", creation_id=cid)["id"]

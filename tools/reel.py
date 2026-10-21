@@ -3,14 +3,20 @@
 Запуск (из папки, где лежит render.py задания):
   python3 /home/claude/threads-autopost/tools/reel.py carousels.json N reels/NN-slug.mp4
 N — номер карусели дня с 1. Стиль и блоки берутся из render.py текущей папки,
-сверху — вертикальная раскладка 9:16, анимации и тихая звуковая подложка. Нужен ffmpeg."""
-import json, sys, pathlib, subprocess, tempfile, shutil
+сверху — вертикальная раскладка 9:16, анимации и тихая звуковая подложка. Нужен ffmpeg.
+
+Хук — первые 2,4 секунды рилса: крупная фраза на оранжевом фоне, слова появляются по одному.
+Его текст берётся из поля "hook" карусели в carousels.json, например
+  {"slug": "...", "hook": "Рынок пекарен *−13%*. А «Хлебник» открыл *79* новых", ...}
+Слова между *звёздочками* выделяются. До 10 слов, только факты из карусели.
+Если поля нет, хук собирается автоматически из обложки."""
+import json, re, sys, pathlib, subprocess, tempfile, shutil
 sys.path[:0] = [str(pathlib.Path.cwd()), str(pathlib.Path(__file__).parent)]
 from render import CSS, BLOCKS, E, LABEL, BRAND, TG, PLANE
 from playwright.sync_api import sync_playwright
 
 W, H, FPS = 1080, 1920, 30
-DUR = {"cover": 3.2, "data": 3.6, "final": 2.6, "tg": 2.8}
+DUR = {"hook": 2.4, "cover": 3.2, "data": 3.6, "final": 2.6, "tg": 2.8}
 
 REEL_CSS = """
 body{width:1080px;height:1920px}
@@ -40,7 +46,40 @@ body{width:1080px;height:1920px}
 .card{animation:up .55s cubic-bezier(.2,.8,.2,1) both}.card+.card{animation-delay:.35s}
 .cta{animation:up .5s .5s cubic-bezier(.2,.8,.2,1) both}
 .hero .num{font-size:240px}
+.hook{background:var(--acc);color:#fff;justify-content:center}
+.hook .top{color:#fff}.hook .tag:before{background:#fff}
+.hook .mid{justify-content:center;gap:56px}
+.hk{font-family:"Inter Display","Inter",sans-serif;font-weight:800;font-size:124px;line-height:1.04;letter-spacing:-.02em}
+.hk span{display:inline-block;animation:pw .28s cubic-bezier(.2,.9,.3,1.3) both;margin-right:.22em}
+.hk span.hi{color:var(--dark)}
+@keyframes pw{from{opacity:.0;transform:translateY(40px) scale(.85)}to{opacity:1;transform:none}}
+.hk span:first-child{animation-name:pw0}
+@keyframes pw0{from{opacity:1;transform:scale(1.15)}to{opacity:1;transform:none}}
+.more{font-size:40px;font-weight:700;opacity:.9;animation:up .4s 1.2s both}
 """
+
+def auto_hook(c):
+    cover = next((s for s in c["slides"] if s["kind"] == "cover"), None)
+    if not cover:
+        return ""
+    num, title = cover.get("num", ""), cover.get("title", "")
+    net = re.search(r"«[^»]+»", title)
+    if "рассмотрит" in title and net:
+        return f"Помещение *{num}*? Его рассмотрит {net.group(0)}"
+    return f"*{num}* — что это значит для собственников помещений"
+
+def hook_html(text):
+    out, hi = [], False
+    for tok in text.split():
+        start = tok.startswith("*")
+        word = tok.replace("*", "")
+        mark = hi or start
+        if tok.count("*") % 2:
+            hi = not hi
+        if word:
+            out.append((word, mark))
+    return "".join(f'<span class="{"hi" if h else ""}" style="animation-delay:{i*0.09:.2f}s">{E(w)}</span>'
+                   for i, (w, h) in enumerate(out))
 
 def prog(i, n, d):
     return '<div class="prog">' + "".join(
@@ -49,6 +88,9 @@ def prog(i, n, d):
 def scene(c, s, i, n, d):
     top = f'<div class="top"><div class="tag">{E(LABEL)}</div></div>'
     p = prog(i, n, d)
+    if s["kind"] == "hook":
+        body = f'<div class="mid"><div class="hk">{hook_html(s["text"])}</div><div class="more">Смотрите до конца ↓</div></div>'
+        return f'<div class="s hook">{p}{top}{body}</div>'
     if s["kind"] == "cover":
         body = (f'<div class="mid"><div class="num a">{E(s["num"])}</div><div class="rule"></div>'
                 f'<h1 class="a d2">{E(s["title"])}</h1><div class="sub a d3">{E(s.get("sub",""))}</div></div>')
@@ -69,6 +111,9 @@ def scene(c, s, i, n, d):
 def main(src, idx, out):
     c = json.loads(pathlib.Path(src).read_text(encoding="utf-8"))[idx - 1]
     slides = [s for s in c["slides"] if s["kind"] != "tg"] + [{"kind": "tg"}]
+    hook = (c.get("hook") or "").strip() or auto_hook(c)
+    if hook:
+        slides = [{"kind": "hook", "text": hook}] + slides
     n = len(slides)
     tmp = pathlib.Path(tempfile.mkdtemp())
     k = 0
@@ -90,15 +135,16 @@ def main(src, idx, out):
         br.close()
     total = k / FPS
     # тихая фоновая подложка: мягкий аккорд с плавным входом и выходом
-    audio = (f"aevalsrc='0.05*sin(2*PI*220*t)+0.04*sin(2*PI*277.2*t)+0.035*sin(2*PI*329.6*t)"
+    # в начале — короткий низкий удар под хук, дальше подложка
+    audio = (f"aevalsrc='0.5*sin(2*PI*55*t)*exp(-7*t)+0.05*sin(2*PI*220*t)+0.04*sin(2*PI*277.2*t)+0.035*sin(2*PI*329.6*t)"
              f"+0.02*sin(2*PI*440*t)*(0.5+0.5*sin(2*PI*0.25*t))':s=44100:d={total:.2f}")
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(FPS), "-i", str(tmp / "%05d.jpg"),
                     "-f", "lavfi", "-i", audio,
-                    "-af", f"afade=t=in:d=1,afade=t=out:st={total-1.5:.2f}:d=1.5",
+                    "-af", f"afade=t=out:st={total-1.5:.2f}:d=1.5",
                     "-c:v", "libx264", "-pix_fmt", "yuv420p", "-profile:v", "high", "-crf", "20",
                     "-c:a", "aac", "-b:a", "128k", "-shortest", "-movflags", "+faststart", out], check=True)
     shutil.rmtree(tmp)
-    print(f"{out}: {total:.1f} c, {n} сцен")
+    print(f"{out}: {total:.1f} c, {n} сцен, хук: {hook}")
 
 if __name__ == "__main__":
     main(sys.argv[1], int(sys.argv[2]), sys.argv[3])
