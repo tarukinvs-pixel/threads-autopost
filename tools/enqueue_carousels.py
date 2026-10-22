@@ -60,9 +60,11 @@ def make_story(cover_png, out_jpg):
     top = 150
     img.paste(cover, (0, top))
     d = ImageDraw.Draw(img)
-    # Убираем «1 / N» и «Листайте →» с обложки: в сторис листать нечего
-    d.rectangle([760, top + 50, 1010, top + 130], fill=STORY_BG)
-    d.rectangle([700, top + 1260, 1010, top + 1340], fill=STORY_BG)
+    # Убираем «1 / N» и «Листайте →» с обложки: в сторис листать нечего.
+    # Заливаем цветом фона обложки (у заявок обложка оранжевая)
+    bg = cover.getpixel((20, 20))
+    d.rectangle([760, top + 50, 1010, top + 130], fill=bg)
+    d.rectangle([700, top + 1260, 1010, top + 1340], fill=bg)
     y = top + 1350 + 70
     d.rectangle([80, y, 220, y + 14], fill=STORY_ACC)
     d.text((80, y + 44), STORY_TEXT[0], font=_font(64), fill=(255, 255, 255))
