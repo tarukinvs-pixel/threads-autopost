@@ -12,8 +12,9 @@ Git-операции (commit/push) выполняет вызывающий: сн
   out/           — папки 01-slug, 02-slug, … с PNG (результат render.py), по порядку публикации
   captions.json  — массив по порядку публикации: [{"caption": "...", "hashtags": "#a #b"}, ...]
   --times        — время слотов через запятую (по умолчанию 8 слотов дня: 5 новостей + 3 заявки)
-  --instagram    — слоты, которые также публикуются в Instagram (по умолчанию заявки: 12:00,16:00,21:00);
+  --instagram    — слоты, которые также публикуются в Instagram (по умолчанию все 8 слотов);
                    пустая строка — ничего в Instagram
+  --stories      — слоты, для которых делается сторис в Instagram (по умолчанию заявки: 12:00,16:00,21:00)
   --articles     — articles.json: массив той же длины, по порядку публикации; для новости
                    {"title": "...", "text": "абзацы через пустую строку"}, для заявки null.
                    Статьи сохраняются в articles/ДАТА/ рядом с posts.csv и уходят в Telegram → Дзен
@@ -70,7 +71,8 @@ def make_story(cover_png, out_jpg):
     d.text((80, y + 44), STORY_TEXT[0], font=_font(64), fill=(255, 255, 255))
     d.text((80, y + 132), STORY_TEXT[1], font=_font(38, bold=False), fill=(185, 192, 199))
     img.save(out_jpg, "JPEG", quality=92, optimize=True)
-DEFAULT_IG = "12:00,16:00,21:00"
+DEFAULT_IG = "09:00,11:00,12:00,14:00,16:00,18:00,19:00,21:00"
+DEFAULT_STORIES = "12:00,16:00,21:00"
 MAX_LEN = 500
 MAX_IMAGES = 20
 
@@ -94,12 +96,14 @@ def main():
     ap.add_argument("--images-repo", required=True)
     ap.add_argument("--times", default=DEFAULT_TIMES)
     ap.add_argument("--instagram", default=DEFAULT_IG)
+    ap.add_argument("--stories", default=DEFAULT_STORIES)
     ap.add_argument("--keep-days", type=int, default=3, help="сколько дней хранить картинки")
     ap.add_argument("--articles", default="", help="articles.json со статьями для Telegram/Дзена")
     a = ap.parse_args()
 
     times = [t.strip() for t in a.times.split(",") if t.strip()]
     ig_slots = {t.strip() for t in a.instagram.split(",") if t.strip()}
+    story_slots = {t.strip() for t in a.stories.split(",") if t.strip()} & ig_slots
     from PIL import Image
     dirs = sorted(d for d in pathlib.Path(a.out).iterdir() if d.is_dir())
     caps = json.loads(pathlib.Path(a.captions).read_text(encoding="utf-8"))
@@ -134,7 +138,7 @@ def main():
             Image.open(p).convert("RGB").save(jpg, "JPEG", quality=92, optimize=True)
             rel.append(f"{a.date}/{d.name}/{jpg.name}")
         story_rel = ""
-        if t in ig_slots:
+        if t in story_slots:
             story = dest / f"story-{d.name}.jpg"
             make_story(pngs[0], story)
             story_rel = f"{a.date}/{d.name}/{story.name}"
@@ -162,7 +166,7 @@ def main():
                      "ig_status": "", "ig_post_id": "", "ig_error": "",
                      "ig_story": story_rel, "ig_story_status": "", "ig_story_id": "",
                      "tg_article": art_rel, "tg_status": "", "tg_post_id": "", "tg_error": ""})
-        ig = (" | + Instagram + сторис" if t in ig_slots else "") + (f" | + статья {len(full)} симв." if art else "")
+        ig = (" | + Instagram" if t in ig_slots else "") + (" + сторис" if t in story_slots else "") + (f" | + статья {len(full)} симв." if art else "")
         if t in ig_slots and len(rel) > 10:
             sys.exit(f"{dt}: для Instagram максимум 10 карточек, а здесь {len(rel)}")
         added.append(f"{dt} | {d.name} | {len(rel)} карточек | {len(text)} симв.{ig}")
